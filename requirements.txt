@@ -1,11 +1,4 @@
-fastapi
-uvicorn
-python-multipart
-deepface
-tf-keras
-mediapipe
-opencv-python-headless
-pandas
-numpy
 streamlit
 requests
+pandas
+opencv-python-headless
