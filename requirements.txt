@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-multipart
+deepface
+mediapipe
+opencv-python-headless
+pandas
+numpy
+streamlit
+requests
