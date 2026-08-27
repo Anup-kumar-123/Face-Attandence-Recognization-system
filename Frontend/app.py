@@ -4,7 +4,7 @@ import pandas as pd
 import cv2
 import time
 
-BACKEND_URL = "http://127.0.0.1:8000"
+BACKEND_URL = "https://face-attandence-recognization-system.onrender.com"
 
 st.set_page_config(
     page_title="Smart Attendance System",
