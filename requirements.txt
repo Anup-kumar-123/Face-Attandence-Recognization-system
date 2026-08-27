@@ -2,6 +2,7 @@ fastapi
 uvicorn
 python-multipart
 deepface
+tf-keras
 mediapipe
 opencv-python-headless
 pandas
