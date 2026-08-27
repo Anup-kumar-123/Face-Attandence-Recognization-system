@@ -56,70 +56,50 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # ----------------- TAB 1: LIVE WEBCAM SCANNER -----------------
 with tab1:
     st.subheader("Real-Time Face Recognition & Anti-Spoofing Scanner")
-    run_cam = st.checkbox("Turn On Camera Scanner")
 
     col1, col2 = st.columns([2, 1])
+    
     with col1:
-        FRAME_WINDOW = st.image([])
+        # Browser-compatible webcam input
+        img_file_buffer = st.camera_input("Take a photo to scan attendance")
+
     with col2:
         st.write("### Live Detection Status")
         status_box = st.empty()
-        status_box.info("Camera turned off. Check the box above to start.")
+        status_box.info("Snap a picture using the camera to process attendance.")
 
-    if run_cam:
-        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    if img_file_buffer is not None:
+        # Read image bytes directly from browser input
+        bytes_data = img_file_buffer.getvalue()
 
-        frame_counter = 0
+        try:
+            response = requests.post(
+                f"{BACKEND_URL}/process-frame",
+                files={"file": ("frame.jpg", bytes_data, "image/jpeg")},
+                timeout=5.0
+            )
+            if response.status_code == 200:
+                data = response.json()
+                status_type = data.get("status", "")
+                detected = data.get("detected", [])
+                msg = data.get("message", "")
 
-        while run_cam:
-            success, frame = cap.read()
-            if not success:
-                status_box.error("Error: Unable to connect to webcam.")
-                break
-
-            frame = cv2.flip(frame, 1)
-
-            frame_counter += 1
-            if frame_counter % 6 == 0:
-                _, img_encoded = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
-                try:
-                    response = requests.post(
-                        f"{BACKEND_URL}/process-frame",
-                        files={"file": ("frame.jpg", img_encoded.tobytes(), "image/jpeg")},
-                        timeout=2.0
+                if status_type == "spoof_detected":
+                    status_box.error(f"🚨 {msg}")
+                elif detected:
+                    user_status = detected[0].get('attendance_status', 'Recorded')
+                    status_box.success(
+                        f"Recognized: **{detected[0]['name']}** (ID: {detected[0]['id']})\n\n"
+                        f"📌 **Status:** `{user_status}`"
                     )
-                    if response.status_code == 200:
-                        data = response.json()
-                        status_type = data.get("status", "")
-                        detected = data.get("detected", [])
-                        msg = data.get("message", "")
-
-                        if status_type == "spoof_detected":
-                            status_box.error(f"🚨 {msg}")
-                        elif detected:
-                            user_status = detected[0].get('attendance_status', 'Recorded')
-                            status_box.success(
-                                f"Recognized: **{detected[0]['name']}** (ID: {detected[0]['id']})\n\n"
-                                f"📌 **Status:** `{user_status}`"
-                            )
-                        elif "No match found" in msg:
-                            status_box.warning("Unknown face detected. Not in database.")
-                        else:
-                            status_box.info("Scanning for registered face...")
-                except requests.exceptions.Timeout:
-                    pass
-                except Exception:
-                    status_box.error("Backend server offline.")
-
-            FRAME_WINDOW.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-            time.sleep(0.01)
-
-        cap.release()
-    else:
-        FRAME_WINDOW.empty()
-
+                elif "No match found" in msg:
+                    status_box.warning("Unknown face detected. Not in database.")
+                else:
+                    status_box.info("Scanning completed.")
+        except requests.exceptions.Timeout:
+            status_box.error("Backend request timed out.")
+        except Exception as e:
+            status_box.error(f"Backend connection error: {e}")
 # ----------------- TAB 2: DAILY ATTENDANCE LOGS -----------------
 with tab2:
     st.subheader("Attendance Log Manager")
